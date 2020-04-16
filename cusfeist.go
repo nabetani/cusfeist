@@ -5,28 +5,6 @@ import (
 	"os"
 )
 
-type optvals struct {
-	src  string
-	dest string
-	pw   string
-}
-
-type subCommand interface {
-	name() string
-	run()
-}
-
-type encCommand struct {
-}
-
-func (c *encCommand) name() string {
-	return "enc"
-}
-
-func (c *encCommand) run() {
-	fmt.Println("run enc")
-}
-
 type decCommand struct {
 }
 
