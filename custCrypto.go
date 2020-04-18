@@ -6,8 +6,25 @@ import (
 	"math/bits"
 )
 
+type innerState struct {
+	v uint64
+}
+
+func (i *innerState) modify(x uint64) uint64 {
+	return x ^ i.v
+}
+
+func (i *innerState) progress() {
+	i.v += 11361801466989700884
+}
+
+func newInnerState() *innerState {
+	return &innerState{}
+}
+
 type custCrypto struct {
 	pw []uint64
+	is *innerState
 }
 
 func (c *custCrypto) blockSize() int64 {
@@ -44,9 +61,10 @@ func (c *custCrypto) decrypt(b []byte, num int64) []byte {
 	shuffles := c.shuffles()
 	num64 := uint64(num)
 	for i := len(shuffles)/2 - 1; 0 <= i; i-- {
-		y ^= shuffles[i*2+1](x, num64)
-		x ^= shuffles[i*2](y, num64)
+		y ^= c.is.modify(shuffles[i*2+1](x, num64))
+		x ^= c.is.modify(shuffles[i*2](y, num64))
 	}
+	c.is.progress()
 	return merge(x, y)
 }
 
@@ -64,9 +82,10 @@ func (c *custCrypto) encrypt(b []byte, num int64) []byte {
 	shuffles := c.shuffles()
 	num64 := uint64(num)
 	for i := 0; i < len(shuffles)/2; i++ {
-		x ^= shuffles[i*2](y, num64)
-		y ^= shuffles[i*2+1](x, num64)
+		x ^= c.is.modify(shuffles[i*2](y, num64))
+		y ^= c.is.modify(shuffles[i*2+1](x, num64))
 	}
+	c.is.progress()
 	return merge(x, y)
 }
 
@@ -92,6 +111,7 @@ func newCustCrypto(pw string) *custCrypto {
 	}
 	c := custCrypto{
 		pw: makePw(),
+		is: newInnerState(),
 	}
 	return &c
 }

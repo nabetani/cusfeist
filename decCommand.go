@@ -23,7 +23,7 @@ func (c *decCommand) decodeOne(pw string, size, offset int64, src io.ReadSeeker,
 	var crypto cryptography = newCustCrypto(pw)
 	blockSize := crypto.blockSize()
 	count := (size + blockSize - 1) / blockSize
-	for num := count - 1; 0 <= num; num-- {
+	for num := int64(0); 0 < count; num++ {
 		b := make([]byte, blockSize)
 		dest.Seek((count-num-1)*blockSize, io.SeekStart)
 		src.Seek(offset+num*blockSize, io.SeekStart)
