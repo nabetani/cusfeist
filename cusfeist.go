@@ -5,17 +5,6 @@ import (
 	"os"
 )
 
-type decCommand struct {
-}
-
-func (c *decCommand) run() {
-	fmt.Println("run dec")
-}
-
-func (c *decCommand) name() string {
-	return "dec"
-}
-
 type helpCommand struct {
 }
 

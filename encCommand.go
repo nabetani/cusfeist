@@ -1,16 +1,20 @@
 package main
 
 import (
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"os"
 )
 
 type encOpts struct {
 	src  string
 	dest string
-	pw   []byte
+	pw   string
 }
 
 var errNoSrc error = errors.New(`"-src" is required but missing`)
@@ -48,10 +52,8 @@ func getEncOpts() encOpts {
 	o := encOpts{}
 	f.StringVar(&o.src, "src", "", "name of a file to read to encode")
 	f.StringVar(&o.dest, "dest", "", "name of a file to write the result")
-	pw := ""
-	f.StringVar(&pw, "pw", "", "password")
+	f.StringVar(&o.pw, "pw", "", "password")
 	err := f.Parse(os.Args[2:])
-	o.pw = []byte(pw)
 	if err != nil {
 		panic(err)
 	}
@@ -68,10 +70,36 @@ func getEncOpts() encOpts {
 	return o
 }
 
-const blockSize = 64 * 1024
+func writeSize(dest io.Writer, size int64) {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(size))
+	_, err := dest.Write(b)
+	if err != nil {
+		panic(err)
+	}
+}
 
-func encrypt(b []byte, pw []byte, num int) []byte {
-	return b
+func (c *encCommand) encodeOne(pw string, size int64, src io.ReadSeeker, dest io.WriteSeeker) error {
+	var crypto cryptography = newCustCrypto(pw)
+	blockSize := crypto.blockSize()
+	count := (size + blockSize - 1) / blockSize
+	for num := int64(0); num < count; num++ {
+		b := make([]byte, blockSize)
+		src.Seek((count-num-1)*blockSize, io.SeekStart)
+		sizeRead, err := src.Read(b)
+		if sizeRead == 0 {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		e := crypto.encrypt(b, num)
+		_, err = dest.Write(e)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *encCommand) run() {
@@ -81,24 +109,32 @@ func (c *encCommand) run() {
 		panic(err)
 	}
 	defer fSrc.Close()
+	srcInfo, err := fSrc.Stat()
+	if err != nil {
+		panic(err)
+	}
 	fDest, err := os.Create(opts.dest)
 	if err != nil {
 		panic(err)
 	}
 	defer fDest.Close()
-	b := make([]byte, blockSize)
-	for num := 1; ; num++ {
-		size, err := fSrc.Read(b)
-		if size == 0 {
-			break
-		}
-		if err != nil {
-			panic(err)
-		}
-		e := encrypt(b[0:size], opts.pw, num)
-		_, err = fDest.Write(e)
-		if err != nil {
-			panic(err)
-		}
+
+	fTmp, err := ioutil.TempFile(".", "tmp")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		fTmp.Close()
+		os.Remove(fTmp.Name())
+	}()
+
+	err = c.encodeOne(opts.pw+":1st", srcInfo.Size(), fSrc, fTmp)
+	if err != nil {
+		panic(err)
+	}
+	writeSize(fDest, srcInfo.Size())
+	err = c.encodeOne(opts.pw+":2nd", srcInfo.Size(), fTmp, fDest)
+	if err != nil {
+		panic(err)
 	}
 }
