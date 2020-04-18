@@ -26,3 +26,16 @@ func TestEncDec(t *testing.T) {
 		}
 	}
 }
+
+func TestEncDecMany(t *testing.T) {
+	cE := newCustCrypto("hoge")
+	cD := newCustCrypto("hoge")
+	for num := int64(0); num < 100; num++ {
+		src := randomBytes(cE.blockSize(), int64(num))
+		enc := cE.encrypt(src, num)
+		dec := cD.decrypt(enc, num)
+		if fmt.Sprint(src) != fmt.Sprint(dec) {
+			t.Errorf("actual: %v  expected:%v, num=%v", dec, src, num)
+		}
+	}
+}
