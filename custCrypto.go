@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/binary"
-	"fmt"
 	"math/bits"
 )
 
@@ -43,7 +42,7 @@ type innerState struct {
 }
 
 func (i *innerState) modify(x uint64) uint64 {
-	return bits.RotateLeft64(x^i.v, i.rot)
+	return bits.RotateLeft64(x^i.v, i.rot&63)
 }
 
 func (i *innerState) progress() {
@@ -128,13 +127,14 @@ func (c *custCrypto) encrypt(b []byte, num int64) []byte {
 func newCustCrypto(pw string) *custCrypto {
 	makePw := func() []uint64 {
 		h := sha1.New()
+		h.Write([]byte(pw))
 		h.Write([]byte("salt of custCrypto algorithm"))
 		pwBytes := []byte{}
-		for i := uint8(0); i < uint8(64); i++ {
+		const pwLen = 64
+		for i := uint8(0); i < uint8(pwLen); i++ {
 			h.Write([]byte(pw))
 			h.Write([]byte{i})
 			pwBytes = h.Sum(pwBytes)
-			fmt.Printf("pwBytes(%d): %v\n", i, pwBytes)
 		}
 		pw := []uint64{}
 		for {
