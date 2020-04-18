@@ -1,16 +1,18 @@
 package main
 
 import (
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
 type encOpts struct {
 	src  string
 	dest string
-	pw   []byte
+	pw   string
 }
 
 var errNoSrc error = errors.New(`"-src" is required but missing`)
@@ -48,10 +50,8 @@ func getEncOpts() encOpts {
 	o := encOpts{}
 	f.StringVar(&o.src, "src", "", "name of a file to read to encode")
 	f.StringVar(&o.dest, "dest", "", "name of a file to write the result")
-	pw := ""
-	f.StringVar(&pw, "pw", "", "password")
+	f.StringVar(&o.pw, "pw", "", "password")
 	err := f.Parse(os.Args[2:])
-	o.pw = []byte(pw)
 	if err != nil {
 		panic(err)
 	}
@@ -68,10 +68,17 @@ func getEncOpts() encOpts {
 	return o
 }
 
-const blockSize = 64 * 1024
-
 func encrypt(b []byte, pw []byte, num int) []byte {
 	return b
+}
+
+func writeSize(dest io.Writer, size int64) {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(size))
+	_, err := dest.Write(b)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (c *encCommand) run() {
@@ -81,13 +88,21 @@ func (c *encCommand) run() {
 		panic(err)
 	}
 	defer fSrc.Close()
+	srcInfo, err := fSrc.Stat()
+	if err != nil {
+		panic(err)
+	}
 	fDest, err := os.Create(opts.dest)
 	if err != nil {
 		panic(err)
 	}
 	defer fDest.Close()
-	b := make([]byte, blockSize)
+	writeSize(fDest, srcInfo.Size())
+
+	var crypto cryptography = newCustCrypto(opts.pw)
+	blockSize := crypto.blockSize()
 	for num := 1; ; num++ {
+		b := make([]byte, blockSize)
 		size, err := fSrc.Read(b)
 		if size == 0 {
 			break
@@ -95,7 +110,7 @@ func (c *encCommand) run() {
 		if err != nil {
 			panic(err)
 		}
-		e := encrypt(b[0:size], opts.pw, num)
+		e := crypto.encrypt(b, num)
 		_, err = fDest.Write(e)
 		if err != nil {
 			panic(err)
