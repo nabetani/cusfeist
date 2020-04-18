@@ -27,12 +27,12 @@ end
 def sameByteRatio( fn0, fn1 )
   b = [fn0,fn1].map{ |fn|
     File.open( fn, &:read ).bytes
-  }.transpose
+  }.transpose.drop(8) #先頭8バイトはサイズなので比較しない
   b.count{ |x,y| x==y }.to_f / b.size
 end
 
 def pwtest
-  src_fn = create_file(1000)
+  src_fn = create_file(10000)
   enc_fns = Array.new(10){ SecureRandom::uuid }
   enc_fns.each.with_index do |enc_fn,ix|
     %x( #{CMD} enc -pw #{ix} -src #{src_fn} -dest #{enc_fn} )
@@ -45,7 +45,7 @@ def pwtest
   end
   enc_fns.each.with_index do |enc_fn,ix|
     next if ix==0
-    puts( "ix=%d, rate=%.2f%%" % [ ix, 100.0*sameByteRatio(enc_fns[0], enc_fn) ])
+    puts( "ix=%d, rate=%.2f%%" % [ ix, 100.0*sameByteRatio(enc_fns[0], enc_fn)])
   end
 end
 
