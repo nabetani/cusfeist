@@ -30,6 +30,26 @@ func (c *custCrypto) shuffles() []func(x, num uint64) uint64 {
 	}
 }
 
+func (c *custCrypto) decrypt(b []byte, num int) []byte {
+	split := func(src []byte) (uint64, uint64) {
+		return binary.LittleEndian.Uint64(src[0:8]), binary.LittleEndian.Uint64(src[8:16])
+	}
+	merge := func(x, y uint64) []byte {
+		r := make([]byte, 16)
+		binary.LittleEndian.PutUint64(r, x)
+		binary.LittleEndian.PutUint64(r[8:16], y)
+		return r
+	}
+	x, y := split(b)
+	shuffles := c.shuffles()
+	num64 := uint64(num)
+	for i := len(shuffles)/2 - 1; 0 <= i; i-- {
+		y ^= shuffles[i*2+1](x, num64)
+		x ^= shuffles[i*2](y, num64)
+	}
+	return merge(x, y)
+}
+
 func (c *custCrypto) encrypt(b []byte, num int) []byte {
 	split := func(src []byte) (uint64, uint64) {
 		return binary.LittleEndian.Uint64(src[0:8]), binary.LittleEndian.Uint64(src[8:16])
