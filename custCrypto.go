@@ -66,13 +66,17 @@ func (c *custCrypto) blockSize() int64 {
 	return 16
 }
 
+func (c *custCrypto) pwAt(ix int) uint64 {
+	return c.pw[ix%len(c.pw)]
+}
+
 func (c *custCrypto) rot1(x, num uint64) uint64 {
-	s := int((num + c.pw[num%uint64(len(c.pw))]) % 64)
+	s := int(c.pwAt(int(num)))
 	return bits.RotateLeft64(x, s)
 }
 
 func (c *custCrypto) rot2(x, num uint64) uint64 {
-	return c.rot1(x*733687, num*5996329)
+	return c.rot1(x*733687, num^0xaa)
 }
 
 func (c *custCrypto) shuffles() []func(x, num uint64) uint64 {
