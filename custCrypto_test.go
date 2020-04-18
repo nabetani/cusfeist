@@ -15,7 +15,7 @@ func randomBytes(size int64, seed int64) []byte {
 
 func TestEncDec(t *testing.T) {
 	c := newCustCrypto("hoge")
-	for num := 0; num < 100; num++ {
+	for num := int64(0); num < 100; num++ {
 		src := randomBytes(c.blockSize(), int64(num))
 		enc := c.encrypt(src, num)
 		dec := c.decrypt(enc, num)

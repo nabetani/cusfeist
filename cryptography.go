@@ -1,6 +1,6 @@
 package main
 
 type cryptography interface {
-	encrypt(b []byte, num int) []byte
+	encrypt(b []byte, num int64) []byte
 	blockSize() int64
 }

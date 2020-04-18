@@ -30,7 +30,7 @@ func (c *custCrypto) shuffles() []func(x, num uint64) uint64 {
 	}
 }
 
-func (c *custCrypto) decrypt(b []byte, num int) []byte {
+func (c *custCrypto) decrypt(b []byte, num int64) []byte {
 	split := func(src []byte) (uint64, uint64) {
 		return binary.LittleEndian.Uint64(src[0:8]), binary.LittleEndian.Uint64(src[8:16])
 	}
@@ -50,7 +50,7 @@ func (c *custCrypto) decrypt(b []byte, num int) []byte {
 	return merge(x, y)
 }
 
-func (c *custCrypto) encrypt(b []byte, num int) []byte {
+func (c *custCrypto) encrypt(b []byte, num int64) []byte {
 	split := func(src []byte) (uint64, uint64) {
 		return binary.LittleEndian.Uint64(src[0:8]), binary.LittleEndian.Uint64(src[8:16])
 	}
