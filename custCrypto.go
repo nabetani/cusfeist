@@ -93,7 +93,7 @@ func newCustCrypto(pw string) *custCrypto {
 	makePw := func() []uint64 {
 		h := sha1.New()
 		h.Write([]byte("salt of custCrypto algorithm"))
-		pwBytes := []byte{}
+		pwBytes := []byte(pw)
 		for i := uint8(0); i < uint8(64); i++ {
 			h.Write([]byte(pwBytes))
 			h.Write([]byte{i})
