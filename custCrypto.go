@@ -45,15 +45,15 @@ func (i *innerState) modify(x uint64) uint64 {
 	return bits.RotateLeft64(x^i.v, i.rot&63)
 }
 
-func (i *innerState) progress() {
-	i.v = i.rng.next()
-	i.rot = int(i.rng.next() & 63)
+func (i *innerState) progress(x, y uint64) {
+	i.v = i.rng.next() ^ x ^ y
+	i.rot = int((i.rng.next() ^ x ^ y) & 63)
 }
 
 func newInnerState(seed []uint64) *innerState {
 	rng := newXoroshiro(seed)
 	r := &innerState{rng: rng}
-	r.progress()
+	r.progress(0, 0)
 	return r
 }
 
@@ -97,13 +97,15 @@ func (c *custCrypto) decrypt(b []byte, num int64) []byte {
 		return r
 	}
 	x, y := split(b)
+	x0 := x
+	y0 := y
 	shuffles := c.shuffles()
 	num64 := uint64(num)
 	for i := len(shuffles)/2 - 1; 0 <= i; i-- {
 		y ^= c.is.modify(shuffles[i*2+1](x, num64))
 		x ^= c.is.modify(shuffles[i*2](y, num64))
 	}
-	c.is.progress()
+	c.is.progress(x0, y0)
 	return merge(x, y)
 }
 
@@ -124,7 +126,7 @@ func (c *custCrypto) encrypt(b []byte, num int64) []byte {
 		x ^= c.is.modify(shuffles[i*2](y, num64))
 		y ^= c.is.modify(shuffles[i*2+1](x, num64))
 	}
-	c.is.progress()
+	c.is.progress(x, y)
 	return merge(x, y)
 }
 
