@@ -70,10 +70,6 @@ func getEncOpts() encOpts {
 	return o
 }
 
-func encrypt(b []byte, pw []byte, num int) []byte {
-	return b
-}
-
 func writeSize(dest io.Writer, size int64) {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(size))
@@ -83,10 +79,10 @@ func writeSize(dest io.Writer, size int64) {
 	}
 }
 
-func (c *encCommand) encodeOne(pw string, size int64, src io.ReadSeeker, dest io.Writer) error {
+func (c *encCommand) encodeOne(pw string, size int64, src io.ReadSeeker, dest io.WriteSeeker) error {
 	var crypto cryptography = newCustCrypto(pw)
 	blockSize := crypto.blockSize()
-	count := size / blockSize
+	count := (size + blockSize - 1) / blockSize
 	for num := int64(0); num < count; num++ {
 		b := make([]byte, blockSize)
 		src.Seek((count-num-1)*blockSize, io.SeekStart)
